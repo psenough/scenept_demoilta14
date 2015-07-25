@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+ <head>
+ 	<title>ScenePT Demoilta#14: 1 Agosto 2015</title>
+ 	<meta charset='utf-8'>
+ 	<style>
+ 	@import url(http://fonts.googleapis.com/css?family=Chivo:900italic);
+ 	
+ 	@font-face {
+		font-family: 'Chivo', sans-serif;
+	}
+	
+	* {
+		margin: 0px;
+		padding: 0px;
+		overflow: hidden;
+	}
+	
+	body {
+		background: white;
+	}
+	
+ 	.aligncenter {
+ 		position: absolute;
+ 		top: 0px;
+ 		width: 100%;
+ 		text-align: center;
+ 		margin: auto;
+ 	}
+	
+	#message {
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		font-family: 'Chivo', sans-serif;
+		color: #fff;
+		width: 100%;
+		height: 100%;
+		margin: auto;
+		text-align: center;
+		font-size: 2em;
+		overflow-y: hidden;
+		text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 1px 1px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+		line-height: 2em;
+		z-index: 21;
+	}
+	
+	#message span {
+		position: relative;
+		top: 80%;
+		/*transform: translateY(-50%);*/
+		font-size:2em;
+	}
+/*	
+	#message_console {
+		position: absolute;
+		bottom: 0px;
+		left: 0px;
+		font-family: 'Neuropol';
+		color: #fff;
+		width: 100%;
+		margin: auto;
+		text-align: left;
+		font-size: 1.5em;
+		overflow-y: hidden;
+		text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 1px 1px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+		line-height: 1.5em;
+		z-index: 21;
+		padding-left: 10px;
+	}
+*/
+ 	</style>
+	<script src="requestanimationframe.js"></script>
+  	<script type="application/javascript">
+
+rand = function(n){
+	return Math.floor(Math.random()*n);
+};
+
+var rms = 0.0;
+var is_chrome = navigator.userAgent.indexOf('Chrome') > -1;
+var is_safari = navigator.userAgent.indexOf("Safari") > -1;
+if ((is_chrome)&&(is_safari)) {is_safari=false;}
+
+function init() {
+	try {
+		// Fix up for prefixing
+		window.AudioContext = window.AudioContext||window.webkitAudioContext;
+		audioContext = new AudioContext();
+		var request = new XMLHttpRequest();
+		if (is_safari) request.open('GET', '02_fear_konstruktor_-_dead_voices.m4a', true);
+		else request.open('GET', '02_fear_konstruktor_-_dead_voices.ogg', true);
+		request.responseType = 'arraybuffer';
+		console.log('requesting');
+		// Decode asynchronously
+		request.onload = function() {
+			decode(request.response);
+		}
+		request.send();
+	} catch(e) {
+		console.log('Web Audio API is not supported in this browser');
+		drawCanvas();
+	}
+}
+var levelChecker;
+var decode = function(response) {
+	audioContext.decodeAudioData(response, function(buffer) {
+		backgroundAudio = audioContext.createBufferSource(); // creates a sound source
+		backgroundAudio.buffer = buffer; // tell the source which sound to play
+		backgroundAudio.connect(audioContext.destination); // connect the source to the context's destination (the speakers)
+		backgroundAudio.loop = true;
+		backgroundAudio.start(0);
+		levelChecker = audioContext.createScriptProcessor(2048, 1, 2);
+		backgroundAudio.connect(levelChecker);
+		levelChecker.connect(audioContext.destination);
+		levelChecker.onaudioprocess = process;
+		console.log('audio playing');
+		// start canvas
+		drawCanvas();
+	}, function(evt) {
+		console.log('failed to load buffer');
+		console.log(evt);
+		drawCanvas();
+	});
+}
+var process = function(e) {
+	var buffer = e.inputBuffer.getChannelData(0);
+	var len = buffer.length;
+	var total = 0;
+	var i = 0;
+	while ( i < len ) total += Math.abs( buffer[i++] );
+	rms = (rms + Math.sqrt( total / len )) * 0.5;
+	//console.log(rms);
+}
+
+var w;
+var h;
+var ctx;
+var halfw;
+var halfh;
+
+map = function(value, istart, istop, ostart, ostop) {
+    return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
+};
+
+function drawCanvas() {
+
+	resize();
+	loadLine('','');
+
+	var num = 10;
+	
+	ctx.fillStyle = "rgba(0,0,0,1.0)";
+	ctx.fillRect(0,0,w,h);
+	
+	function drawThis() {
+		
+		var d2 = new Date();
+		var n2 = d2.getTime(); 
+		
+		var sin1 = Math.sin((n2-n)/200)+1.0;
+		var cos1 = Math.cos((n2-n)/800)+1.0;
+		var cos2 = Math.cos((n2-n)/2800);
+		
+		//var gray = parseInt(155*cos2+100,10);
+		//ctx.fillStyle = "rgba("+gray+","+gray+","+gray+",0.001)";
+		//ctx.fillRect(0,0,w,h);
+		//if (rms > 0.45) ctx.fillStyle = "rgba(0,0,0,0.1)";
+		//ctx.fillRect(0,0,w,h);
+		
+		ctx.lineWidth = 10*rms;
+		ctx.strokeStyle = "rgba("+parseInt(155*cos1*0.5+50,10)+","+parseInt(25*sin1*rms*0.75,10)+",105,0.01)";
+		ctx.save();
+		ctx.translate(w*.5,h*.5);
+		ctx.rotate((n2-n)*0.01);
+		for(var i=0; i<num; i++) {
+			var sizex = halfw - i*(4+cos2);
+			var sizey = halfh - i*(4+cos2);
+			//ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(w*.25-sizex, h*.25-sizey);
+			ctx.lineTo(w*.25-sizex, h*.25+sizey);
+			ctx.lineTo(w*.25+sizex, h*.25+sizey);
+			ctx.lineTo(w*.25+sizex, h*.25-sizey);
+			ctx.closePath();
+			ctx.stroke();
+		}
+		ctx.restore();
+		
+		ctx.lineWidth = 5;
+		ctx.strokeStyle = "rgba(0,0,0,0.02)";
+		ctx.save();
+		ctx.translate(w*.5,h*.5);
+		ctx.rotate((n2-n)*0.01);
+		for(var i=0; i<num*.5; i++) {
+			var sizex = halfw - i*(2+cos2*sin1*cos1);
+			var sizey = halfh - i*(2+cos2*sin1*cos1);
+			//ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(w*.5-sizex, h*.5-sizey);
+			ctx.lineTo(w*.5-sizex, h*.5+sizey);
+			ctx.lineTo(w*.5+sizex, h*.5+sizey);
+			//ctx.lineTo(w*.5+sizex, h*.5-sizey);
+			ctx.closePath();
+			ctx.stroke();
+		}
+		ctx.restore();
+		
+		//ctx.rotate(sin1*0.01);
+
+		//ctx.fillStyle = "rgba(255,255,255,"+rms+")";
+		//ctx.fillRect(0,0,w,h);		
+	}
+	
+	requestAnimationFrame( animate );
+	
+	var d = new Date();
+	var n = d.getTime();
+	var repeater = n;
+	var rperiod = 6000;
+	var index = 0;
+
+	function animate() {
+		requestAnimationFrame( animate );
+		drawThis();
+		
+		var dom = document.getElementById('message');
+		if (dom) {
+			var d2 = new Date();
+			var n2 = d2.getTime(); 
+			if (((n2-n) > 6000) && (n2-repeater) > rperiod) {
+				repeater = n2;
+				loadLine('',words[index++]);
+				if (index >= words.length) index = 0;
+			}
+		}
+	}
+}
+
+window.onresize = resize;
+
+function resize() {
+	w = window.innerWidth;
+	h = window.innerHeight;
+	
+	var canvas = document.getElementById("canvas");
+	canvas.setAttribute("width", w);
+	canvas.setAttribute("height", h);
+	
+	ctx = canvas.getContext("2d");
+	ctx.width = w;
+	ctx.height = h;
+	halfw = w*.5;
+	halfh = h*.5;
+}
+
+function loadLine(thisclass, thistext) {
+	var content = '';
+	content += '<span class="'+thisclass+'">'+thistext+'</span><br />';
+	document.getElementById('message').innerHTML = content;
+}
+
+var words = [
+"tenham medo!",
+"tenham muito medo!",
+"a ScenePT Demoilta#14 vem ai",
+"dia 1 de Agosto 2015",
+"a partir das 16h",
+"nos escritórios da Artica",
+"no Campus FCT",
+"do Monte da Caparica",
+"Edificio 6",
+"",
+"vamos ver as demos de Julho",
+"e fazer algo mais tenebroso",
+"um ritual macabro",
+"uma shadowparty",
+"à Boozembly 2015",
+"",
+"e talvez também à Assembly",
+"",
+"preparem o figado",
+"tragam superbock",
+"e tremam"
+];
+
+    
+  </script>
+ </head>
+ <body onload="init()">
+ 	<div class="aligncenter">
+   		<canvas id="canvas" width="800" height="600"></canvas>
+   		<div id="message">escrevendo um guia aberto de como assustar gatos...</div>
+   	</div>
+ </body>
+</html>
